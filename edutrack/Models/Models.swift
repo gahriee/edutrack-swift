@@ -5,7 +5,7 @@ import FirebaseFirestore
 
 struct Professor: Codable, Identifiable, Hashable {
     let id: String
-    let name: String
+    var name: String
     let email: String
     // password never stored on client; handled by Firebase Auth
 }

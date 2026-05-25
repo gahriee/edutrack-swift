@@ -135,6 +135,8 @@ fileprivate struct StudentRowCard: View {
     let student: Student
     @ObservedObject var viewModel: SectionDetailViewModel
     
+    @State private var currentStatus: AttendanceStatus = .present
+    
     var body: some View {
         VStack(spacing: 12) {
             HStack(spacing: 12) {
@@ -163,13 +165,21 @@ fileprivate struct StudentRowCard: View {
             Divider()
                 .padding(.horizontal, -16)
             
-            AttendanceStatusPicker(status: Binding(
-                get: { viewModel.statusForStudent(student) },
-                set: { newStatus in
-                    Task { await viewModel.updateStatus(for: student, status: newStatus) }
+            AttendanceStatusPicker(status: $currentStatus)
+                .padding(.top, 4)
+                .onChange(of: currentStatus) { newStatus in
+                    if newStatus != viewModel.statusForStudent(student) {
+                        Task { await viewModel.updateStatus(for: student, status: newStatus) }
+                    }
                 }
-            ))
-            .padding(.top, 4)
+                .onAppear {
+                    currentStatus = viewModel.statusForStudent(student)
+                }
+                .onChange(of: viewModel.statusForStudent(student)) { newRemoteStatus in
+                    if currentStatus != newRemoteStatus {
+                        currentStatus = newRemoteStatus
+                    }
+                }
         }
         .padding(16)
         .background(AppColors.surface)
