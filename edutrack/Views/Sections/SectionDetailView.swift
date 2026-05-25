@@ -11,14 +11,15 @@ struct SectionDetailView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Date Bar
-            HStack {
+            // Enhanced Date Bar
+            HStack(spacing: 20) {
                 Button {
                     let prevDay = Calendar.current.date(byAdding: .day, value: -1, to: viewModel.selectedDate)!
-                    viewModel.changeDate(to: prevDay)
+                    withAnimation { viewModel.changeDate(to: prevDay) }
                 } label: {
-                    Image(systemName: "chevron.left")
-                        .padding()
+                    Image(systemName: "chevron.left.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(AppColors.primary)
                 }
 
                 DatePicker("", selection: Binding(
@@ -26,52 +27,49 @@ struct SectionDetailView: View {
                     set: { viewModel.changeDate(to: $0) }
                 ), displayedComponents: .date)
                 .labelsHidden()
-
+                
                 Button {
                     let nextDay = Calendar.current.date(byAdding: .day, value: 1, to: viewModel.selectedDate)!
-                    viewModel.changeDate(to: nextDay)
+                    withAnimation { viewModel.changeDate(to: nextDay) }
                 } label: {
-                    Image(systemName: "chevron.right")
-                        .padding()
+                    Image(systemName: "chevron.right.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(AppColors.primary)
                 }
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, 16)
+            .padding(.horizontal, 24)
             .background(AppColors.surface)
+            .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
+            .zIndex(1) // Keep shadow over content
 
             // Summary Badges
             let counts = getCounts()
-            HStack(spacing: 16) {
-                BadgeView(title: "Present", count: counts.present, color: AppColors.present)
-                BadgeView(title: "Absent", count: counts.absent, color: AppColors.absent)
-                BadgeView(title: "Late", count: counts.late, color: AppColors.late)
+            HStack(spacing: 12) {
+                BadgeView(title: "Present", count: counts.present, color: AppColors.present, icon: "checkmark.circle.fill")
+                BadgeView(title: "Absent", count: counts.absent, color: AppColors.absent, icon: "xmark.circle.fill")
+                BadgeView(title: "Late", count: counts.late, color: AppColors.late, icon: "clock.fill")
             }
-            .padding()
-            .background(AppColors.surface)
+            .padding(.horizontal)
+            .padding(.top, 16)
             .padding(.bottom, 8)
 
             // Student List
             if viewModel.students.isEmpty {
-                EmptyStateView(icon: "person.crop.circle.badge.plus", title: "No Students", message: "Add students from the library.")
+                Spacer()
+                EmptyStateView(
+                    icon: "person.crop.circle.badge.plus", 
+                    title: "No Students Yet", 
+                    message: "Add students from the library to start tracking attendance."
+                )
+                Spacer()
             } else {
                 List {
                     ForEach(viewModel.students) { student in
-                        HStack {
-                            VStack(alignment: .leading) {
-                                Text(student.fullName)
-                                    .font(.headline)
-                                Text(student.studentNumber)
-                                    .font(.caption)
-                                    .foregroundColor(AppColors.textSecondary)
-                            }
-                            Spacer()
-                            AttendanceStatusPicker(status: Binding(
-                                get: { viewModel.statusForStudent(student) },
-                                set: { newStatus in
-                                    Task { await viewModel.updateStatus(for: student, status: newStatus) }
-                                }
-                            ))
-                            .frame(width: 150)
-                        }
+                        StudentRowCard(student: student, viewModel: viewModel)
+                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
                     }
                     .onDelete { indexSet in
                         for index in indexSet {
@@ -81,9 +79,11 @@ struct SectionDetailView: View {
                     }
                 }
                 .listStyle(.plain)
+                .scrollContentBackground(.hidden)
             }
         }
         .navigationTitle(section.name)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
@@ -91,7 +91,9 @@ struct SectionDetailView: View {
                         Label("Export CSV", systemImage: "square.and.arrow.up")
                     }
                 } label: {
-                    Image(systemName: "ellipsis.circle")
+                    Image(systemName: "ellipsis.circle.fill")
+                        .foregroundColor(AppColors.primary)
+                        .font(.title3)
                 }
             }
         }
@@ -113,23 +115,80 @@ struct SectionDetailView: View {
     }
 }
 
-struct BadgeView: View {
+fileprivate struct StudentRowCard: View {
+    let student: Student
+    @ObservedObject var viewModel: SectionDetailViewModel
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 12) {
+                // Initials Avatar
+                ZStack {
+                    Circle()
+                        .fill(AppColors.primary.opacity(0.1))
+                        .frame(width: 44, height: 44)
+                    Text(String(student.firstName.prefix(1) + student.lastName.prefix(1)).uppercased())
+                        .font(.system(.subheadline, design: .rounded, weight: .bold))
+                        .foregroundColor(AppColors.primary)
+                }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(student.fullName)
+                        .font(.headline)
+                        .foregroundColor(AppColors.textPrimary)
+                    Text(student.studentNumber)
+                        .font(.caption)
+                        .foregroundColor(AppColors.textSecondary)
+                }
+                
+                Spacer()
+            }
+            
+            Divider()
+                .padding(.horizontal, -16)
+            
+            AttendanceStatusPicker(status: Binding(
+                get: { viewModel.statusForStudent(student) },
+                set: { newStatus in
+                    Task { await viewModel.updateStatus(for: student, status: newStatus) }
+                }
+            ))
+            .padding(.top, 4)
+        }
+        .padding(16)
+        .background(AppColors.surface)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
+    }
+}
+
+fileprivate struct BadgeView: View {
     let title: String
     let count: Int
     let color: Color
+    let icon: String
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 8) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.caption2)
+                Text(title)
+                    .font(.caption.bold())
+            }
+            .foregroundColor(color)
+            
             Text("\(count)")
-                .font(.headline)
-                .foregroundColor(color)
-            Text(title)
-                .font(.caption2)
-                .foregroundColor(AppColors.textSecondary)
+                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .foregroundColor(AppColors.textPrimary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
+        .padding(.vertical, 12)
         .background(color.opacity(0.1))
-        .cornerRadius(8)
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(color.opacity(0.2), lineWidth: 1)
+        )
     }
 }

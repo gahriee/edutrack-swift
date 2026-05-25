@@ -13,15 +13,24 @@ struct ClassDetailView: View {
     var body: some View {
         Group {
             if viewModel.sections.isEmpty {
-                EmptyStateView(icon: "list.bullet.rectangle", title: "No Sections", message: "Tap + to add a section.")
+                EmptyStateView(
+                    icon: "rectangle.3.group", 
+                    title: "No Sections", 
+                    message: "Tap + to add a section for this class."
+                )
             } else {
                 List {
                     ForEach(viewModel.sections) { section in
-                        NavigationLink(value: section) {
-                            Text(section.name)
-                                .font(.body)
-                                .foregroundColor(AppColors.textPrimary)
+                        ZStack {
+                            SectionCardView(section: section)
+                            NavigationLink(value: section) {
+                                EmptyView()
+                            }
+                            .opacity(0)
                         }
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                     }
                     .onDelete { indexSet in
                         for index in indexSet {
@@ -30,16 +39,21 @@ struct ClassDetailView: View {
                         }
                     }
                 }
-                .listStyle(.insetGrouped)
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .padding(.top, 8)
             }
         }
         .navigationTitle(schoolClass.name)
+        .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     showingAddSection = true
                 } label: {
-                    Image(systemName: "plus")
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title3)
+                        .foregroundColor(AppColors.primary)
                 }
             }
         }
@@ -53,6 +67,42 @@ struct ClassDetailView: View {
     }
 }
 
+fileprivate struct SectionCardView: View {
+    let section: Section
+    
+    var body: some View {
+        HStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(LinearGradient(colors: [AppColors.primary, AppColors.secondary], startPoint: .topLeading, endPoint: .bottomTrailing).opacity(0.15))
+                    .frame(width: 48, height: 48)
+                Image(systemName: "rectangle.3.group.fill")
+                    .foregroundColor(AppColors.primary)
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(section.name)
+                    .font(.headline)
+                    .foregroundColor(AppColors.textPrimary)
+                
+                Text("\(section.studentIds.count) Student\(section.studentIds.count == 1 ? "" : "s")")
+                    .font(.subheadline)
+                    .foregroundColor(AppColors.textSecondary)
+            }
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .foregroundColor(AppColors.outline)
+                .font(.footnote.weight(.semibold))
+        }
+        .padding(16)
+        .background(AppColors.surface)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
+    }
+}
+
 struct AddSectionSheet: View {
     @Environment(\.dismiss) var dismiss
     @ObservedObject var viewModel: ClassDetailViewModel
@@ -60,23 +110,62 @@ struct AddSectionSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                TextField("Section Name", text: $name)
-            }
-            .navigationTitle("New Section")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+            VStack(spacing: 24) {
+                // Header Graphic
+                ZStack {
+                    Circle()
+                        .fill(AppColors.primary.opacity(0.1))
+                        .frame(width: 80, height: 80)
+                    Image(systemName: "rectangle.badge.plus")
+                        .font(.system(size: 32, weight: .semibold))
+                        .foregroundColor(AppColors.primary)
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") {
+                .padding(.top, 32)
+                
+                VStack(spacing: 8) {
+                    Text("Add a Section")
+                        .font(.title2.bold())
+                        .foregroundColor(AppColors.textPrimary)
+                    Text("Organize your class into manageable groups.")
+                        .font(.subheadline)
+                        .foregroundColor(AppColors.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                }
+                
+                VStack(spacing: 16) {
+                    AuthTextField(title: "Section Name (e.g. Lab A)", text: $name)
+                    
+                    Button(action: {
                         Task {
                             await viewModel.addSection(name: name)
                             dismiss()
                         }
+                    }) {
+                        Text("Create Section")
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(
+                                LinearGradient(colors: [AppColors.primary, AppColors.secondary], startPoint: .leading, endPoint: .trailing)
+                            )
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                            .shadow(color: AppColors.primary.opacity(0.3), radius: 5, x: 0, y: 3)
                     }
-                    .disabled(name.isEmpty)
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .opacity(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.6 : 1)
+                }
+                .padding(.horizontal)
+                
+                Spacer()
+            }
+            .background(AppColors.background.ignoresSafeArea())
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundColor(AppColors.textSecondary)
                 }
             }
         }
