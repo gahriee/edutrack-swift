@@ -3,7 +3,7 @@ import FirebaseFirestore
 
 // MARK: - Professor
 
-struct Professor: Codable, Identifiable {
+struct Professor: Codable, Identifiable, Hashable {
     let id: String
     let name: String
     let email: String
@@ -12,7 +12,7 @@ struct Professor: Codable, Identifiable {
 
 // MARK: - SchoolClass
 
-struct SchoolClass: Codable, Identifiable {
+struct SchoolClass: Codable, Identifiable, Hashable {
     let id: String
     let name: String        // e.g. "Mathematics 101"
     let subject: String
@@ -21,7 +21,7 @@ struct SchoolClass: Codable, Identifiable {
 
 // MARK: - Section
 
-struct Section: Codable, Identifiable {
+struct Section: Codable, Identifiable, Hashable {
     let id: String
     let name: String        // e.g. "Section A"
     let classId: String     // → SchoolClass
@@ -30,7 +30,7 @@ struct Section: Codable, Identifiable {
 
 // MARK: - Student
 
-struct Student: Codable, Identifiable {
+struct Student: Codable, Identifiable, Hashable {
     let id: String
     let firstName: String
     let lastName: String
@@ -43,7 +43,7 @@ struct Student: Codable, Identifiable {
 
 // MARK: - AttendanceRecord
 
-struct AttendanceRecord: Codable, Identifiable {
+struct AttendanceRecord: Codable, Identifiable, Hashable {
     let id: String
     let sectionId: String   // → Section
     let studentId: String   // → Student
