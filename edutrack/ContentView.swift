@@ -1,24 +1,21 @@
-//
-//  ContentView.swift
-//  edutrack
-//
-//  Created by Eli on 5/26/26.
-//
-
 import SwiftUI
 
 struct ContentView: View {
-    var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
-    }
-}
+    @EnvironmentObject var authViewModel: AuthViewModel
 
-#Preview {
-    ContentView()
+    var body: some View {
+        Group {
+            switch authViewModel.state {
+            case .loading:
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(AppColors.background)
+            case .unauthenticated:
+                AuthView()
+            case .authenticated:
+                MainTabView()
+            }
+        }
+        .animation(.default, value: authViewModel.state)
+    }
 }
