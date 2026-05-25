@@ -113,6 +113,16 @@ struct SectionDetailView: View {
         .sheet(isPresented: $showingAddStudent) {
             AddStudentToSectionSheet(viewModel: viewModel)
         }
+        .alert("Error", isPresented: Binding(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.errorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            if let errorMessage = viewModel.errorMessage {
+                Text(errorMessage)
+            }
+        }
         .background(AppColors.background.ignoresSafeArea())
     }
 
@@ -135,10 +145,15 @@ fileprivate struct StudentRowCard: View {
     let student: Student
     @ObservedObject var viewModel: SectionDetailViewModel
     
-    @State private var currentStatus: AttendanceStatus = .present
-    
     var body: some View {
-        VStack(spacing: 12) {
+        let statusBinding = Binding<AttendanceStatus>(
+            get: { viewModel.statusForStudent(student) },
+            set: { newStatus in
+                Task { await viewModel.updateStatus(for: student, status: newStatus) }
+            }
+        )
+
+        return VStack(spacing: 12) {
             HStack(spacing: 12) {
                 // Initials Avatar
                 ZStack {
@@ -165,21 +180,8 @@ fileprivate struct StudentRowCard: View {
             Divider()
                 .padding(.horizontal, -16)
             
-            AttendanceStatusPicker(status: $currentStatus)
+            AttendanceStatusPicker(status: statusBinding)
                 .padding(.top, 4)
-                .onChange(of: currentStatus) { newStatus in
-                    if newStatus != viewModel.statusForStudent(student) {
-                        Task { await viewModel.updateStatus(for: student, status: newStatus) }
-                    }
-                }
-                .onAppear {
-                    currentStatus = viewModel.statusForStudent(student)
-                }
-                .onChange(of: viewModel.statusForStudent(student)) { newRemoteStatus in
-                    if currentStatus != newRemoteStatus {
-                        currentStatus = newRemoteStatus
-                    }
-                }
         }
         .padding(16)
         .background(AppColors.surface)

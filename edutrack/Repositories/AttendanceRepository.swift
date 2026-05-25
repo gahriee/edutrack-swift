@@ -122,6 +122,22 @@ final class AttendanceRepository {
         ])
     }
 
+    func sectionStream(sectionId: String) -> AsyncStream<Result<Section, Error>> {
+        AsyncStream { continuation in
+            let listener = db.collection("sections").document(sectionId)
+                .addSnapshotListener { snapshot, error in
+                    if let error {
+                        continuation.yield(.failure(error))
+                    } else if let snapshot = snapshot, snapshot.exists, let section = Section(document: snapshot) {
+                        continuation.yield(.success(section))
+                    } else {
+                        continuation.yield(.failure(AppError.notFound("Section not found")))
+                    }
+                }
+            continuation.onTermination = { _ in listener.remove() }
+        }
+    }
+
     // MARK: - Students
 
     func allStudentsStream(professorId: String) -> AsyncStream<Result<[Student], Error>> {
@@ -223,21 +239,22 @@ final class AttendanceRepository {
     // MARK: - Attendance
 
     func attendanceStream(sectionId: String, date: Date) -> AsyncStream<Result<AttendanceSession, Error>> {
-        let startOfDay = Calendar.current.startOfDay(for: date)
-        let endOfDay   = Calendar.current.date(byAdding: .day, value: 1, to: startOfDay)!
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = .current
+        let dateString = formatter.string(from: date)
 
         return AsyncStream { continuation in
             let listener = db.collection("attendance_records")
                 .whereField("sectionId", isEqualTo: sectionId)
-                .whereField("date", isGreaterThanOrEqualTo: Timestamp(date: startOfDay))
-                .whereField("date", isLessThan: Timestamp(date: endOfDay))
+                .whereField("dateString", isEqualTo: dateString)
                 .addSnapshotListener { snapshot, error in
                     if let error {
                         continuation.yield(.failure(error))
                     } else {
                         let records = snapshot?.documents.compactMap(AttendanceRecord.init) ?? []
                         let session = AttendanceSession(
-                            id: sectionId + "_" + startOfDay.ISO8601Format(),
+                            id: sectionId + "_" + dateString,
                             sectionId: sectionId,
                             date: date,
                             records: records
@@ -250,27 +267,22 @@ final class AttendanceRepository {
     }
 
     func updateRecord(sectionId: String, date: Date, studentId: String, status: AttendanceStatus) async throws {
-        let startOfDay = Calendar.current.startOfDay(for: date)
-        let query = db.collection("attendance_records")
-            .whereField("sectionId", isEqualTo: sectionId)
-            .whereField("studentId", isEqualTo: studentId)
-            .whereField("date", isGreaterThanOrEqualTo: Timestamp(date: startOfDay))
-            .whereField("date", isLessThan: Timestamp(date: Calendar.current.date(byAdding: .day, value: 1, to: startOfDay)!))
-
-        let existing = try await query.getDocuments()
-        let data: [String: Any] = [
-            "sectionId": sectionId,
-            "studentId": studentId,
-            "date": Timestamp(date: startOfDay),
-            "status": status.rawValue
-        ]
-
-        if let doc = existing.documents.first {
-            try await doc.reference.updateData(["status": status.rawValue])
-        } else {
-            let ref = db.collection("attendance_records").document()
-            try await ref.setData(["id": ref.documentID].merging(data) { $1 })
-        }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = .current
+        let dateString = formatter.string(from: date)
+        
+        let docId = "\(sectionId)_\(studentId)_\(dateString)"
+        let record = AttendanceRecord(
+            id: docId,
+            sectionId: sectionId,
+            studentId: studentId,
+            date: Calendar.current.startOfDay(for: date),
+            dateString: dateString,
+            status: status
+        )
+        
+        try await db.collection("attendance_records").document(docId).setData(record.firestoreData)
     }
 
     // MARK: - CSV Export (no third-party library needed)

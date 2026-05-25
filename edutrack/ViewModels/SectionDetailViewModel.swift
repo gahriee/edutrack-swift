@@ -11,6 +11,7 @@ final class SectionDetailViewModel: ObservableObject {
 
     private let section: Section
     private let repository = AttendanceRepository.shared
+    private var sectionTask: Task<Void, Never>?
     private var studentsTask: Task<Void, Never>?
     private var allStudentsTask: Task<Void, Never>?
     private var attendanceTask: Task<Void, Never>?
@@ -20,15 +21,18 @@ final class SectionDetailViewModel: ObservableObject {
         startListening()
     }
     deinit {
+        sectionTask?.cancel()
         studentsTask?.cancel()
         allStudentsTask?.cancel()
         attendanceTask?.cancel()
     }
 
     private func startListening() {
-        studentsTask = Task {
-            for await result in repository.studentsStream(studentIds: section.studentIds) {
-                if case .success(let students) = result { self.students = students }
+        sectionTask = Task {
+            for await result in repository.sectionStream(sectionId: section.id) {
+                if case .success(let updatedSection) = result {
+                    updateStudentsStream(studentIds: updatedSection.studentIds)
+                }
             }
         }
         guard let professorId = FirebaseAuth.Auth.auth().currentUser?.uid else { return }
@@ -38,6 +42,15 @@ final class SectionDetailViewModel: ObservableObject {
             }
         }
         listenToAttendance()
+    }
+
+    private func updateStudentsStream(studentIds: [String]) {
+        studentsTask?.cancel()
+        studentsTask = Task {
+            for await result in repository.studentsStream(studentIds: studentIds) {
+                if case .success(let students) = result { self.students = students }
+            }
+        }
     }
 
     func changeDate(to date: Date) {

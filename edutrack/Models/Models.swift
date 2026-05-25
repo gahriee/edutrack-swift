@@ -48,6 +48,7 @@ struct AttendanceRecord: Codable, Identifiable, Hashable {
     let sectionId: String   // → Section
     let studentId: String   // → Student
     let date: Date
+    let dateString: String  // e.g. "2026-05-26"
     var status: AttendanceStatus
 }
 
@@ -148,6 +149,15 @@ extension AttendanceRecord {
             self.date = Date()
         }
         
+        if let dateStr = data["dateString"] as? String {
+            self.dateString = dateStr
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            formatter.timeZone = .current
+            self.dateString = formatter.string(from: self.date)
+        }
+        
         let statusString = data["status"] as? String ?? AttendanceStatus.present.rawValue
         self.status = AttendanceStatus(rawValue: statusString) ?? .present
     }
@@ -157,6 +167,7 @@ extension AttendanceRecord {
             "sectionId": sectionId,
             "studentId": studentId,
             "date": Timestamp(date: date),
+            "dateString": dateString,
             "status": status.rawValue
         ]
     }
