@@ -3,6 +3,7 @@ import SwiftUI
 struct DashboardView: View {
     @StateObject private var viewModel = DashboardViewModel()
     @State private var showingAddClass = false
+    @State private var classToEdit: SchoolClass?
 
     let columns = [GridItem(.flexible()), GridItem(.flexible())]
 
@@ -29,6 +30,11 @@ struct DashboardView: View {
                                 }
                                 .buttonStyle(PlainButtonStyle())
                                 .contextMenu {
+                                    Button {
+                                        classToEdit = schoolClass
+                                    } label: {
+                                        Label("Edit", systemImage: "pencil")
+                                    }
                                     Button(role: .destructive) {
                                         Task { await viewModel.deleteClass(schoolClass) }
                                     } label: {
@@ -65,6 +71,9 @@ struct DashboardView: View {
         .navigationBarTitleDisplayMode(.large)
         .sheet(isPresented: $showingAddClass) {
             AddClassSheet(viewModel: viewModel)
+        }
+        .sheet(item: $classToEdit) { schoolClass in
+            EditClassSheet(viewModel: viewModel, schoolClass: schoolClass)
         }
         .navigationDestination(for: SchoolClass.self) { schoolClass in
             ClassDetailView(schoolClass: schoolClass)
@@ -158,6 +167,86 @@ struct AddClassSheet: View {
                         }
                     }) {
                         Text("Create Class")
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(
+                                LinearGradient(colors: [AppColors.primary, AppColors.secondary], startPoint: .leading, endPoint: .trailing)
+                            )
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                            .shadow(color: AppColors.primary.opacity(0.3), radius: 5, x: 0, y: 3)
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || subject.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .opacity((name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || subject.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) ? 0.6 : 1)
+                }
+                .padding(.horizontal)
+                
+                Spacer()
+            }
+            .background(AppColors.background.ignoresSafeArea())
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundColor(AppColors.textSecondary)
+                }
+            }
+        }
+    }
+}
+
+struct EditClassSheet: View {
+    @Environment(\.dismiss) var dismiss
+    @ObservedObject var viewModel: DashboardViewModel
+    let schoolClass: SchoolClass
+    
+    @State private var name: String
+    @State private var subject: String
+    
+    init(viewModel: DashboardViewModel, schoolClass: SchoolClass) {
+        self.viewModel = viewModel
+        self.schoolClass = schoolClass
+        self._name = State(initialValue: schoolClass.name)
+        self._subject = State(initialValue: schoolClass.subject)
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                // Header Graphic
+                ZStack {
+                    Circle()
+                        .fill(AppColors.primary.opacity(0.1))
+                        .frame(width: 80, height: 80)
+                    Image(systemName: "pencil.and.outline")
+                        .font(.system(size: 32, weight: .semibold))
+                        .foregroundColor(AppColors.primary)
+                }
+                .padding(.top, 32)
+                
+                VStack(spacing: 8) {
+                    Text("Edit Class")
+                        .font(.title2.bold())
+                        .foregroundColor(AppColors.textPrimary)
+                    Text("Update the details for this class.")
+                        .font(.subheadline)
+                        .foregroundColor(AppColors.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                }
+                
+                VStack(spacing: 16) {
+                    AuthTextField(title: "Class Name (e.g. Mathematics 101)", text: $name)
+                    AuthTextField(title: "Subject (e.g. Math)", text: $subject)
+                    
+                    Button(action: {
+                        Task {
+                            await viewModel.updateClass(schoolClass, name: name, subject: subject)
+                            dismiss()
+                        }
+                    }) {
+                        Text("Save Changes")
                             .fontWeight(.semibold)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)

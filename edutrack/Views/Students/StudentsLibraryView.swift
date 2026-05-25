@@ -3,6 +3,7 @@ import SwiftUI
 struct StudentsLibraryView: View {
     @StateObject private var viewModel = StudentsViewModel()
     @State private var showingCreateStudent = false
+    @State private var studentToEdit: Student?
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -20,6 +21,19 @@ struct StudentsLibraryView: View {
                                 .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                                 .listRowBackground(Color.clear)
                                 .listRowSeparator(.hidden)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button(role: .destructive) {
+                                        Task { await viewModel.deleteStudent(student) }
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                    Button {
+                                        studentToEdit = student
+                                    } label: {
+                                        Label("Edit", systemImage: "pencil")
+                                    }
+                                    .tint(.blue)
+                                }
                                 .swipeActions(edge: .leading) {
                                     Button {
                                         // Add logic for AddStudentToSectionSheet
@@ -63,6 +77,9 @@ struct StudentsLibraryView: View {
         .searchable(text: $viewModel.searchText)
         .sheet(isPresented: $showingCreateStudent) {
             CreateStudentSheet(viewModel: viewModel)
+        }
+        .sheet(item: $studentToEdit) { student in
+            EditStudentSheet(viewModel: viewModel, student: student)
         }
         .background(AppColors.background.ignoresSafeArea())
     }

@@ -35,4 +35,9 @@ final class DashboardViewModel: ObservableObject {
         do { try await repository.deleteClass(classId: schoolClass.id) }
         catch { errorMessage = error.localizedDescription }
     }
+
+    func updateClass(_ schoolClass: SchoolClass, name: String, subject: String) async {
+        do { try await repository.updateClass(classId: schoolClass.id, name: name, subject: subject) }
+        catch { errorMessage = error.localizedDescription }
+    }
 }

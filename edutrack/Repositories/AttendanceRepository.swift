@@ -77,6 +77,13 @@ final class AttendanceRepository {
         try await batch.commit()
     }
 
+    func updateClass(classId: String, name: String, subject: String) async throws {
+        try await db.collection("classes").document(classId).updateData([
+            "name": name,
+            "subject": subject
+        ])
+    }
+
     // MARK: - Sections
 
     func sectionsStream(classId: String) -> AsyncStream<Result<[Section], Error>> {
@@ -107,6 +114,12 @@ final class AttendanceRepository {
         records.documents.forEach { batch.deleteDocument($0.reference) }
         batch.deleteDocument(db.collection("sections").document(sectionId))
         try await batch.commit()
+    }
+
+    func updateSection(sectionId: String, name: String) async throws {
+        try await db.collection("sections").document(sectionId).updateData([
+            "name": name
+        ])
     }
 
     // MARK: - Students
@@ -152,6 +165,38 @@ final class AttendanceRepository {
         let student = Student(id: ref.documentID, firstName: firstName, lastName: lastName,
                               studentNumber: studentNumber, email: email, professorId: professorId)
         try await ref.setData(student.firestoreData)
+    }
+
+    func updateStudent(studentId: String, firstName: String, lastName: String, studentNumber: String, email: String) async throws {
+        try await db.collection("students").document(studentId).updateData([
+            "firstName": firstName,
+            "lastName": lastName,
+            "studentNumber": studentNumber,
+            "email": email
+        ])
+    }
+
+    func deleteStudent(studentId: String) async throws {
+        let batch = db.batch()
+        
+        // Remove from all sections
+        let sections = try await db.collection("sections")
+            .whereField("studentIds", arrayContains: studentId).getDocuments()
+        for sectionDoc in sections.documents {
+            batch.updateData(
+                ["studentIds": FieldValue.arrayRemove([studentId])],
+                forDocument: sectionDoc.reference
+            )
+        }
+        
+        // Delete all attendance records for this student
+        let records = try await db.collection("attendance_records")
+            .whereField("studentId", isEqualTo: studentId).getDocuments()
+        records.documents.forEach { batch.deleteDocument($0.reference) }
+        
+        // Delete the student document
+        batch.deleteDocument(db.collection("students").document(studentId))
+        try await batch.commit()
     }
 
     func addStudentToSection(studentId: String, sectionId: String) async throws {

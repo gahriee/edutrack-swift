@@ -35,4 +35,9 @@ final class ClassDetailViewModel: ObservableObject {
         do { try await repository.deleteSection(sectionId: section.id) }
         catch { errorMessage = error.localizedDescription }
     }
+
+    func updateSection(_ section: Section, name: String) async {
+        do { try await repository.updateSection(sectionId: section.id, name: name) }
+        catch { errorMessage = error.localizedDescription }
+    }
 }

@@ -3,6 +3,7 @@ import SwiftUI
 struct ClassDetailView: View {
     @StateObject private var viewModel: ClassDetailViewModel
     @State private var showingAddSection = false
+    @State private var sectionToEdit: Section?
     let schoolClass: SchoolClass
 
     init(schoolClass: SchoolClass) {
@@ -32,11 +33,18 @@ struct ClassDetailView: View {
                             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
-                        }
-                        .onDelete { indexSet in
-                            for index in indexSet {
-                                let section = viewModel.sections[index]
-                                Task { await viewModel.deleteSection(section) }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    Task { await viewModel.deleteSection(section) }
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                                Button {
+                                    sectionToEdit = section
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                .tint(.blue)
                             }
                         }
                         
@@ -72,6 +80,9 @@ struct ClassDetailView: View {
         .navigationBarTitleDisplayMode(.large)
         .sheet(isPresented: $showingAddSection) {
             AddSectionSheet(viewModel: viewModel)
+        }
+        .sheet(item: $sectionToEdit) { section in
+            EditSectionSheet(viewModel: viewModel, section: section)
         }
         .navigationDestination(for: Section.self) { section in
             SectionDetailView(section: section)
@@ -156,6 +167,83 @@ struct AddSectionSheet: View {
                         }
                     }) {
                         Text("Create Section")
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(
+                                LinearGradient(colors: [AppColors.primary, AppColors.secondary], startPoint: .leading, endPoint: .trailing)
+                            )
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                            .shadow(color: AppColors.primary.opacity(0.3), radius: 5, x: 0, y: 3)
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .opacity(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.6 : 1)
+                }
+                .padding(.horizontal)
+                
+                Spacer()
+            }
+            .background(AppColors.background.ignoresSafeArea())
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundColor(AppColors.textSecondary)
+                }
+            }
+        }
+    }
+}
+
+struct EditSectionSheet: View {
+    @Environment(\.dismiss) var dismiss
+    @ObservedObject var viewModel: ClassDetailViewModel
+    let section: Section
+    
+    @State private var name: String
+    
+    init(viewModel: ClassDetailViewModel, section: Section) {
+        self.viewModel = viewModel
+        self.section = section
+        self._name = State(initialValue: section.name)
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                // Header Graphic
+                ZStack {
+                    Circle()
+                        .fill(AppColors.primary.opacity(0.1))
+                        .frame(width: 80, height: 80)
+                    Image(systemName: "pencil.and.outline")
+                        .font(.system(size: 32, weight: .semibold))
+                        .foregroundColor(AppColors.primary)
+                }
+                .padding(.top, 32)
+                
+                VStack(spacing: 8) {
+                    Text("Edit Section")
+                        .font(.title2.bold())
+                        .foregroundColor(AppColors.textPrimary)
+                    Text("Update the name of this section.")
+                        .font(.subheadline)
+                        .foregroundColor(AppColors.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                }
+                
+                VStack(spacing: 16) {
+                    AuthTextField(title: "Section Name (e.g. Lab A)", text: $name)
+                    
+                    Button(action: {
+                        Task {
+                            await viewModel.updateSection(section, name: name)
+                            dismiss()
+                        }
+                    }) {
+                        Text("Save Changes")
                             .fontWeight(.semibold)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)

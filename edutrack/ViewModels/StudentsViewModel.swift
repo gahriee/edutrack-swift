@@ -42,4 +42,21 @@ final class StudentsViewModel: ObservableObject {
             )
         } catch { errorMessage = error.localizedDescription }
     }
+
+    func updateStudent(_ student: Student, firstName: String, lastName: String, studentNumber: String, email: String) async {
+        do {
+            try await repository.updateStudent(
+                studentId: student.id,
+                firstName: firstName,
+                lastName: lastName,
+                studentNumber: studentNumber,
+                email: email
+            )
+        } catch { errorMessage = error.localizedDescription }
+    }
+
+    func deleteStudent(_ student: Student) async {
+        do { try await repository.deleteStudent(studentId: student.id) }
+        catch { errorMessage = error.localizedDescription }
+    }
 }

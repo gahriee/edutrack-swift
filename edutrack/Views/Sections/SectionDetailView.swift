@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SectionDetailView: View {
     @StateObject private var viewModel: SectionDetailViewModel
+    @State private var showingAddStudent = false
     let section: Section
 
     init(section: Section) {
@@ -94,6 +95,11 @@ struct SectionDetailView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
+                    Button {
+                        showingAddStudent = true
+                    } label: {
+                        Label("Add Student", systemImage: "person.badge.plus")
+                    }
                     ShareLink(item: viewModel.exportCSV()) {
                         Label("Export CSV", systemImage: "square.and.arrow.up")
                     }
@@ -103,6 +109,9 @@ struct SectionDetailView: View {
                         .font(.title3)
                 }
             }
+        }
+        .sheet(isPresented: $showingAddStudent) {
+            AddStudentToSectionSheet(viewModel: viewModel)
         }
         .background(AppColors.background.ignoresSafeArea())
     }
@@ -194,5 +203,77 @@ fileprivate struct BadgeView: View {
         .background(AppColors.surface)
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
+    }
+}
+
+struct AddStudentToSectionSheet: View {
+    @Environment(\.dismiss) var dismiss
+    @ObservedObject var viewModel: SectionDetailViewModel
+    @State private var searchText = ""
+
+    var availableStudents: [Student] {
+        let inSectionIds = Set(viewModel.students.map { $0.id })
+        var filtered = viewModel.allStudents.filter { !inSectionIds.contains($0.id) }
+        
+        if !searchText.isEmpty {
+            let q = searchText.lowercased()
+            filtered = filtered.filter {
+                $0.fullName.lowercased().contains(q) ||
+                $0.studentNumber.lowercased().contains(q) ||
+                $0.email.lowercased().contains(q)
+            }
+        }
+        return filtered
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack {
+                if availableStudents.isEmpty && searchText.isEmpty {
+                    EmptyStateView(
+                        icon: "person.3.fill",
+                        title: "No Available Students",
+                        message: "All students are already in this section or your library is empty."
+                    )
+                } else {
+                    List {
+                        ForEach(availableStudents) { student in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(student.fullName)
+                                        .font(.headline)
+                                        .foregroundColor(AppColors.textPrimary)
+                                    Text(student.studentNumber)
+                                        .font(.subheadline)
+                                        .foregroundColor(AppColors.textSecondary)
+                                }
+                                Spacer()
+                                Button {
+                                    Task { await viewModel.addStudentToSection(student) }
+                                } label: {
+                                    Image(systemName: "plus.circle.fill")
+                                        .foregroundColor(AppColors.primary)
+                                        .font(.title2)
+                                }
+                            }
+                            .padding(.vertical, 8)
+                        }
+                    }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                }
+            }
+            .searchable(text: $searchText, prompt: "Search students...")
+            .background(AppColors.background.ignoresSafeArea())
+            .navigationTitle("Add Student")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .fontWeight(.semibold)
+                        .foregroundColor(AppColors.primary)
+                }
+            }
+        }
     }
 }

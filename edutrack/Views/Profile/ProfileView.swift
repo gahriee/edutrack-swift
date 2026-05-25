@@ -1,15 +1,8 @@
 import SwiftUI
 
-enum AppTheme: String, CaseIterable, Identifiable {
-    case system = "System"
-    case light = "Light"
-    case dark = "Dark"
-    var id: String { self.rawValue }
-}
 
 struct ProfileView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
-    @AppStorage("appTheme") private var appTheme: AppTheme = .system
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -38,45 +31,6 @@ struct ProfileView: View {
                             .foregroundColor(AppColors.textSecondary)
                     }
                 }
-                
-                // Theme Selection Card
-                VStack(spacing: 16) {
-                    HStack(spacing: 16) {
-                        ZStack {
-                            Circle()
-                                .fill(AppColors.background)
-                                .frame(width: 40, height: 40)
-                            
-                            Image(systemName: "paintpalette.fill")
-                                .foregroundColor(AppColors.primary)
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Appearance")
-                                .font(.headline)
-                                .foregroundColor(AppColors.textPrimary)
-                            
-                            Text("Choose your preferred theme")
-                                .font(.caption)
-                                .foregroundColor(AppColors.textSecondary)
-                        }
-                        
-                        Spacer()
-                    }
-                    
-                    Picker("Theme", selection: $appTheme) {
-                        ForEach(AppTheme.allCases) { theme in
-                            Text(theme.rawValue).tag(theme)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                }
-                .padding(16)
-                .background(AppColors.surface)
-                .cornerRadius(16)
-                .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
-                .padding(.horizontal)
-                
                 Spacer(minLength: 40)
 
                 // Sign Out Button

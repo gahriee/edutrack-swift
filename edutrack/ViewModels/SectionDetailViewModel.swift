@@ -1,8 +1,10 @@
 import Foundation
+import FirebaseAuth
 
 @MainActor
 final class SectionDetailViewModel: ObservableObject {
     @Published var students: [Student] = []
+    @Published var allStudents: [Student] = []
     @Published var session: AttendanceSession?
     @Published var selectedDate: Date = Calendar.current.startOfDay(for: .now)
     @Published var errorMessage: String?
@@ -10,6 +12,7 @@ final class SectionDetailViewModel: ObservableObject {
     private let section: Section
     private let repository = AttendanceRepository.shared
     private var studentsTask: Task<Void, Never>?
+    private var allStudentsTask: Task<Void, Never>?
     private var attendanceTask: Task<Void, Never>?
 
     init(section: Section) {
@@ -18,6 +21,7 @@ final class SectionDetailViewModel: ObservableObject {
     }
     deinit {
         studentsTask?.cancel()
+        allStudentsTask?.cancel()
         attendanceTask?.cancel()
     }
 
@@ -25,6 +29,12 @@ final class SectionDetailViewModel: ObservableObject {
         studentsTask = Task {
             for await result in repository.studentsStream(studentIds: section.studentIds) {
                 if case .success(let students) = result { self.students = students }
+            }
+        }
+        guard let professorId = FirebaseAuth.Auth.auth().currentUser?.uid else { return }
+        allStudentsTask = Task {
+            for await result in repository.allStudentsStream(professorId: professorId) {
+                if case .success(let allStudents) = result { self.allStudents = allStudents }
             }
         }
         listenToAttendance()
@@ -62,6 +72,11 @@ final class SectionDetailViewModel: ObservableObject {
 
     func removeStudentFromSection(_ student: Student) async {
         do { try await repository.removeStudentFromSection(studentId: student.id, sectionId: section.id) }
+        catch { errorMessage = error.localizedDescription }
+    }
+
+    func addStudentToSection(_ student: Student) async {
+        do { try await repository.addStudentToSection(studentId: student.id, sectionId: section.id) }
         catch { errorMessage = error.localizedDescription }
     }
 
