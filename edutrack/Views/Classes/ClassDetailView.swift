@@ -11,52 +11,65 @@ struct ClassDetailView: View {
     }
 
     var body: some View {
-        Group {
-            if viewModel.sections.isEmpty {
-                EmptyStateView(
-                    icon: "rectangle.3.group", 
-                    title: "No Sections", 
-                    message: "Tap + to add a section for this class."
-                )
-            } else {
-                List {
-                    ForEach(viewModel.sections) { section in
-                        ZStack {
-                            SectionCardView(section: section)
-                            NavigationLink(value: section) {
-                                EmptyView()
+        ZStack(alignment: .bottomTrailing) {
+            Group {
+                if viewModel.sections.isEmpty {
+                    EmptyStateView(
+                        icon: "rectangle.3.group", 
+                        title: "No Sections", 
+                        message: "Tap + to add a section for this class."
+                    )
+                } else {
+                    List {
+                        ForEach(viewModel.sections) { section in
+                            ZStack {
+                                SectionCardView(section: section)
+                                NavigationLink(value: section) {
+                                    EmptyView()
+                                }
+                                .opacity(0)
                             }
-                            .opacity(0)
+                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
                         }
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                    }
-                    .onDelete { indexSet in
-                        for index in indexSet {
-                            let section = viewModel.sections[index]
-                            Task { await viewModel.deleteSection(section) }
+                        .onDelete { indexSet in
+                            for index in indexSet {
+                                let section = viewModel.sections[index]
+                                Task { await viewModel.deleteSection(section) }
+                            }
                         }
+                        
+                        // Add transparent padding so FAB doesn't obscure the last item
+                        Color.clear
+                            .frame(height: 80)
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
                     }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .padding(.top, 8)
                 }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .padding(.top, 8)
             }
+            
+            Button {
+                showingAddSection = true
+            } label: {
+                Image(systemName: "plus")
+                    .font(.title2.weight(.bold))
+                    .foregroundColor(.white)
+                    .frame(width: 56, height: 56)
+                    .background(
+                        LinearGradient(colors: [AppColors.primary, AppColors.secondary], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    )
+                    .clipShape(Circle())
+                    .shadow(color: AppColors.primary.opacity(0.4), radius: 8, x: 0, y: 4)
+            }
+            .padding(.trailing, 24)
+            .padding(.bottom, 24)
         }
         .navigationTitle(schoolClass.name)
         .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    showingAddSection = true
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title3)
-                        .foregroundColor(AppColors.primary)
-                }
-            }
-        }
         .sheet(isPresented: $showingAddSection) {
             AddSectionSheet(viewModel: viewModel)
         }

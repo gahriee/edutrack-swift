@@ -7,51 +7,62 @@ struct DashboardView: View {
     let columns = [GridItem(.flexible()), GridItem(.flexible())]
 
     var body: some View {
-        Group {
-            if viewModel.isLoading {
-                ProgressView()
-                    .tint(AppColors.primary)
-                    .scaleEffect(1.5)
-            } else if viewModel.classes.isEmpty {
-                EmptyStateView(
-                    icon: "books.vertical.fill", 
-                    title: "No Classes", 
-                    message: "Tap + to add your first class."
-                )
-            } else {
-                ScrollView {
-                    LazyVGrid(columns: columns, spacing: 16) {
-                        ForEach(viewModel.classes) { schoolClass in
-                            NavigationLink(value: schoolClass) {
-                                ClassCardView(schoolClass: schoolClass)
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            .contextMenu {
-                                Button(role: .destructive) {
-                                    Task { await viewModel.deleteClass(schoolClass) }
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
+        ZStack(alignment: .bottomTrailing) {
+            Group {
+                if viewModel.isLoading {
+                    ProgressView()
+                        .tint(AppColors.primary)
+                        .scaleEffect(1.5)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if viewModel.classes.isEmpty {
+                    EmptyStateView(
+                        icon: "books.vertical.fill", 
+                        title: "No Classes", 
+                        message: "Tap + to add your first class."
+                    )
+                } else {
+                    ScrollView {
+                        LazyVGrid(columns: columns, spacing: 16) {
+                            ForEach(viewModel.classes) { schoolClass in
+                                NavigationLink(value: schoolClass) {
+                                    ClassCardView(schoolClass: schoolClass)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        Task { await viewModel.deleteClass(schoolClass) }
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
                                 }
                             }
                         }
+                        .padding()
+                        .padding(.bottom, 80) // Prevents FAB from overlapping last row
                     }
-                    .padding()
                 }
+            }
+            
+            if !viewModel.isLoading {
+                Button {
+                    showingAddClass = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.title2.weight(.bold))
+                        .foregroundColor(.white)
+                        .frame(width: 56, height: 56)
+                        .background(
+                            LinearGradient(colors: [AppColors.primary, AppColors.secondary], startPoint: .topLeading, endPoint: .bottomTrailing)
+                        )
+                        .clipShape(Circle())
+                        .shadow(color: AppColors.primary.opacity(0.4), radius: 8, x: 0, y: 4)
+                }
+                .padding(.trailing, 24)
+                .padding(.bottom, 24)
             }
         }
         .navigationTitle("Dashboard")
         .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    showingAddClass = true
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title3)
-                        .foregroundColor(AppColors.primary)
-                }
-            }
-        }
         .sheet(isPresented: $showingAddClass) {
             AddClassSheet(viewModel: viewModel)
         }

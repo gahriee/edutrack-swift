@@ -5,49 +5,62 @@ struct StudentsLibraryView: View {
     @State private var showingCreateStudent = false
 
     var body: some View {
-        Group {
-            if viewModel.students.isEmpty && viewModel.searchText.isEmpty {
-                EmptyStateView(
-                    icon: "person.3.fill", 
-                    title: "No Students", 
-                    message: "Tap + to register students to your library."
-                )
-            } else {
-                List {
-                    ForEach(viewModel.filtered) { student in
-                        StudentLibraryCard(student: student)
-                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+        ZStack(alignment: .bottomTrailing) {
+            Group {
+                if viewModel.students.isEmpty && viewModel.searchText.isEmpty {
+                    EmptyStateView(
+                        icon: "person.3.fill", 
+                        title: "No Students", 
+                        message: "Tap + to register students to your library."
+                    )
+                } else {
+                    List {
+                        ForEach(viewModel.filtered) { student in
+                            StudentLibraryCard(student: student)
+                                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                                .swipeActions(edge: .leading) {
+                                    Button {
+                                        // Add logic for AddStudentToSectionSheet
+                                    } label: {
+                                        Label("Add to Class", systemImage: "folder.badge.plus")
+                                    }
+                                    .tint(AppColors.primary)
+                                }
+                        }
+                        
+                        // Add transparent padding so FAB doesn't obscure the last item
+                        Color.clear
+                            .frame(height: 80)
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
-                            .swipeActions(edge: .leading) {
-                                Button {
-                                    // Add logic for AddStudentToSectionSheet
-                                } label: {
-                                    Label("Add to Class", systemImage: "folder.badge.plus")
-                                }
-                                .tint(AppColors.primary)
-                            }
                     }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .padding(.top, 8)
                 }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .padding(.top, 8)
             }
+            
+            Button {
+                showingCreateStudent = true
+            } label: {
+                Image(systemName: "plus")
+                    .font(.title2.weight(.bold))
+                    .foregroundColor(.white)
+                    .frame(width: 56, height: 56)
+                    .background(
+                        LinearGradient(colors: [AppColors.primary, AppColors.secondary], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    )
+                    .clipShape(Circle())
+                    .shadow(color: AppColors.primary.opacity(0.4), radius: 8, x: 0, y: 4)
+            }
+            .padding(.trailing, 24)
+            .padding(.bottom, 24)
         }
         .navigationTitle("Students Library")
         .navigationBarTitleDisplayMode(.large)
         .searchable(text: $viewModel.searchText)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    showingCreateStudent = true
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title3)
-                        .foregroundColor(AppColors.primary)
-                }
-            }
-        }
         .sheet(isPresented: $showingCreateStudent) {
             CreateStudentSheet(viewModel: viewModel)
         }

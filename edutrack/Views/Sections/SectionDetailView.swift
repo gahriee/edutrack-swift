@@ -12,7 +12,7 @@ struct SectionDetailView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Enhanced Date Bar
-            HStack(spacing: 20) {
+            HStack {
                 Button {
                     let prevDay = Calendar.current.date(byAdding: .day, value: -1, to: viewModel.selectedDate)!
                     withAnimation { viewModel.changeDate(to: prevDay) }
@@ -21,12 +21,16 @@ struct SectionDetailView: View {
                         .font(.title2)
                         .foregroundColor(AppColors.primary)
                 }
+                
+                Spacer()
 
                 DatePicker("", selection: Binding(
                     get: { viewModel.selectedDate },
                     set: { viewModel.changeDate(to: $0) }
                 ), displayedComponents: .date)
                 .labelsHidden()
+                
+                Spacer()
                 
                 Button {
                     let nextDay = Calendar.current.date(byAdding: .day, value: 1, to: viewModel.selectedDate)!
@@ -37,10 +41,13 @@ struct SectionDetailView: View {
                         .foregroundColor(AppColors.primary)
                 }
             }
-            .padding(.vertical, 16)
-            .padding(.horizontal, 24)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 20)
             .background(AppColors.surface)
+            .cornerRadius(16)
             .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
+            .padding(.horizontal)
+            .padding(.top, 16)
             .zIndex(1) // Keep shadow over content
 
             // Summary Badges
@@ -180,15 +187,12 @@ fileprivate struct BadgeView: View {
             
             Text("\(count)")
                 .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundColor(AppColors.textPrimary)
+                .foregroundColor(color)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
-        .background(color.opacity(0.1))
+        .background(AppColors.surface)
         .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(color.opacity(0.2), lineWidth: 1)
-        )
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
     }
 }

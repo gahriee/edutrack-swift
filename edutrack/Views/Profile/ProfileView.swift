@@ -1,7 +1,15 @@
 import SwiftUI
 
+enum AppTheme: String, CaseIterable, Identifiable {
+    case system = "System"
+    case light = "Light"
+    case dark = "Dark"
+    var id: String { self.rawValue }
+}
+
 struct ProfileView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
+    @AppStorage("appTheme") private var appTheme: AppTheme = .system
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -31,14 +39,39 @@ struct ProfileView: View {
                     }
                 }
                 
-                // Details Card (Visual placeholers for a premium feel)
-                VStack(spacing: 0) {
-                    ProfileRow(icon: "person.text.rectangle", title: "Account Details", subtitle: "Manage your profile")
-                    Divider().padding(.leading, 72)
-                    ProfileRow(icon: "bell.badge", title: "Notifications", subtitle: "Update preferences")
-                    Divider().padding(.leading, 72)
-                    ProfileRow(icon: "shield.checkerboard", title: "Privacy & Security", subtitle: "Password and authentication")
+                // Theme Selection Card
+                VStack(spacing: 16) {
+                    HStack(spacing: 16) {
+                        ZStack {
+                            Circle()
+                                .fill(AppColors.background)
+                                .frame(width: 40, height: 40)
+                            
+                            Image(systemName: "paintpalette.fill")
+                                .foregroundColor(AppColors.primary)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Appearance")
+                                .font(.headline)
+                                .foregroundColor(AppColors.textPrimary)
+                            
+                            Text("Choose your preferred theme")
+                                .font(.caption)
+                                .foregroundColor(AppColors.textSecondary)
+                        }
+                        
+                        Spacer()
+                    }
+                    
+                    Picker("Theme", selection: $appTheme) {
+                        ForEach(AppTheme.allCases) { theme in
+                            Text(theme.rawValue).tag(theme)
+                        }
+                    }
+                    .pickerStyle(.segmented)
                 }
+                .padding(16)
                 .background(AppColors.surface)
                 .cornerRadius(16)
                 .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
@@ -79,43 +112,5 @@ struct ProfileView: View {
             return String(first + last).uppercased()
         }
         return String(name.prefix(1)).uppercased()
-    }
-}
-
-fileprivate struct ProfileRow: View {
-    let icon: String
-    let title: String
-    let subtitle: String
-    
-    var body: some View {
-        HStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(AppColors.background)
-                    .frame(width: 40, height: 40)
-                
-                Image(systemName: icon)
-                    .foregroundColor(AppColors.primary)
-            }
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.headline)
-                    .foregroundColor(AppColors.textPrimary)
-                
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundColor(AppColors.textSecondary)
-            }
-            
-            Spacer()
-            
-            Image(systemName: "chevron.right")
-                .font(.footnote.weight(.semibold))
-                .foregroundColor(AppColors.outline)
-        }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 16)
-        .contentShape(Rectangle())
     }
 }
