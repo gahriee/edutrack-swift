@@ -209,3 +209,98 @@ struct CreateStudentSheet: View {
         }
     }
 }
+
+struct EditStudentSheet: View {
+    @Environment(\.dismiss) var dismiss
+    @ObservedObject var viewModel: StudentsViewModel
+    let student: Student
+    
+    @State private var firstName: String
+    @State private var lastName: String
+    @State private var studentNumber: String
+    @State private var email: String
+
+    init(viewModel: StudentsViewModel, student: Student) {
+        self.viewModel = viewModel
+        self.student = student
+        _firstName = State(initialValue: student.firstName)
+        _lastName = State(initialValue: student.lastName)
+        _studentNumber = State(initialValue: student.studentNumber)
+        _email = State(initialValue: student.email)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 24) {
+                    // Header Graphic
+                    ZStack {
+                        Circle()
+                            .fill(AppColors.primary.opacity(0.1))
+                            .frame(width: 80, height: 80)
+                        Image(systemName: "pencil.circle")
+                            .font(.system(size: 32, weight: .semibold))
+                            .foregroundColor(AppColors.primary)
+                    }
+                    .padding(.top, 32)
+                    
+                    VStack(spacing: 8) {
+                        Text("Edit Student")
+                            .font(.title2.bold())
+                            .foregroundColor(AppColors.textPrimary)
+                        Text("Update the student's information.")
+                            .font(.subheadline)
+                            .foregroundColor(AppColors.textSecondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                    }
+                    
+                    VStack(spacing: 16) {
+                        AuthTextField(title: "First Name", text: $firstName)
+                        AuthTextField(title: "Last Name", text: $lastName)
+                        AuthTextField(title: "Student ID (e.g. 20230001)", text: $studentNumber)
+                        AuthTextField(title: "Email", text: $email)
+                        
+                        Button(action: {
+                            Task {
+                                await viewModel.updateStudent(
+                                    student,
+                                    firstName: firstName,
+                                    lastName: lastName,
+                                    studentNumber: studentNumber,
+                                    email: email
+                                )
+                                dismiss()
+                            }
+                        }) {
+                            Text("Save Changes")
+                                .fontWeight(.semibold)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(
+                                    LinearGradient(colors: [AppColors.primary, AppColors.secondary], startPoint: .leading, endPoint: .trailing)
+                                )
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                                .shadow(color: AppColors.primary.opacity(0.3), radius: 5, x: 0, y: 3)
+                        }
+                        .padding(.top, 8)
+                        .disabled(firstName.isEmpty || lastName.isEmpty || studentNumber.isEmpty || email.isEmpty)
+                        .opacity((firstName.isEmpty || lastName.isEmpty || studentNumber.isEmpty || email.isEmpty) ? 0.6 : 1)
+                    }
+                    .padding(.horizontal)
+                    
+                    Spacer(minLength: 40)
+                }
+            }
+            .background(AppColors.background.ignoresSafeArea())
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundColor(AppColors.textSecondary)
+                }
+            }
+        }
+    }
+}
